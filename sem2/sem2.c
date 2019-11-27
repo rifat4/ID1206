@@ -29,6 +29,7 @@ struct head {
 	struct head *prev;
 };
 
+struct head *arena = NULL;
 
 struct head *after(struct head *block) {
 	return (struct head*)((char*)block + HEAD + block->size);
@@ -58,19 +59,24 @@ void sanity(struct head *list, struct head *stadium){
 		temp = temp->next;
 	}
 	int allocator = 0;
-	/*
+
+	//printf("\n\nOur arena starts at: %p\n", arena);
+	struct head *randtest;
 	while(allocator < ARENA){
-		printf("%d\n",stadium->size);
-		if(stadium->free != after(stadium)->bfree){
+		//printf("size of current block: %d\n",stadium->size);
+		randtest=after(stadium);
+		if(stadium->free != randtest->bfree){
+			printf("----------failed sanity check----------\n");
 			printf("stadium->free != next->bfree\n");
-			printf("stadium->free: %d after->bfree %d\n", stadium->free, after(stadium)->bfree);
+			printf("stadium->free: %d after->bfree %d\n", stadium->free, randtest->bfree);
 			printf("p1: %p, p2: %p\n", stadium, after(stadium));
+			printf("----------failed sanity check----------\n");
 		}
 		allocator += stadium->size + HEAD;
-		stadium = after(stadium);
+		stadium = randtest;
 	}
+	//printf("printf our arena ends at %p\n\n\n", stadium);
 	if(allocator != ARENA)printf("allocator != ARENA. allocator = %d, ARENA = %d\n", allocator, ARENA);
-	*/
 }
 
 struct head *flist;
@@ -118,8 +124,8 @@ struct head *split (struct head *block, int size){
 	//printf("size : %d\n", size);
 	//printf("this is fine\n");
 
-	struct head *splt = (struct head*)((char*)block + rsize);
-	printf("splt = block + %d\n", rsize);
+	struct head *splt = (struct head*)((char*)block + rsize + HEAD);
+	//printf("the new split block has the size %d, and is on address %p\n", size, splt);
 	splt->bsize = rsize;
 	splt->bfree = TRUE;
 	splt->size  = size;
@@ -139,9 +145,6 @@ struct head *split (struct head *block, int size){
 	//printf("second addr %p\n", splt);
 	return splt;
 }
-
-
-struct head *arena = NULL;
 
 struct head *new() {
 
@@ -167,7 +170,7 @@ struct head *new() {
 	new->free = TRUE;
 	new->size = ARENA - 2*HEAD;
 
-	printf("initial size: %ld\n", ARENA -2*HEAD);
+	//printf("initial size: %ld\n", ARENA -2*HEAD);
 
 	struct head *sentinel = after(new); //Dummy head? for circle?
 	//After further reading this is to prevent unwanted merging.
@@ -227,22 +230,24 @@ void *dalloc(size_t request){
 	else {
 		taken->free = FALSE;
 		//printf("debug1\n");
-		printf("%p %p\n", taken, after(taken));
+		//printf("%p %p\n", taken, after(taken));
 		after(taken)->bfree = FALSE;
 		return HIDE(taken);
 	}
 }
 
 void dfree(void *memory){
+	sanity(flist, arena);
 	if(memory != NULL){
 		struct head *block = (void*)((char*)memory - HEAD);
+		memory = MAGIC(memory);
 		struct head *aft = after(block);
-		
 		block->free = TRUE;
-		block->bfree = aft->bfree;
 		aft->bfree = TRUE;
 		insert(block);
 	}
+	printf("middle\n");
+	sanity(flist, arena);
 	return;
 }
 
