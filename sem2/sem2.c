@@ -29,18 +29,6 @@ struct head {
 	struct head *prev;
 };
 
-//checks that our freelist is doubly linked correctly && multiple of Align
-//Checks if they are free too.
-void sanity(struct head *list){
-	struct head *temp;
-	temp = list;
-	while(temp != NULL){
-		if(temp != list->next->prev)"failed sanity check, ->next->prev != this.head";
-		if(temp->size % ALIGN != 0)"failed sanity check, not aligned";
-		if(temp->free != TRUE)"failed sanity check, not free";
-		temp = temp->next;
-	}
-}
 
 struct head *after(struct head *block) {
 	return (struct head*)((char*)block + HEAD + block->size);
@@ -51,6 +39,39 @@ struct head *before(struct head *block) {
 }
 
 
+//checks that our freelist is doubly linked correctly && multiple of Align
+//Checks if they are free too.
+void sanity(struct head *list, struct head *stadium){
+	struct head *temp;
+	temp = list;
+	while(temp != NULL && temp->next != NULL){
+		if(temp != temp->next->prev){
+			printf("failed sanity check, ->next->prev != this.head\n");
+			printf("\n\n");
+			printf("temp %p\n", temp);
+			struct head *next = temp->next;
+			printf("next %p\n", next);
+			printf("next->prev: %p\n\n\n", next->prev);
+		}
+		if(temp->size % ALIGN != 0)printf("failed sanity check, not aligned\n");
+		if(temp->free != TRUE)printf("failed sanity check, not free\n");
+		temp = temp->next;
+	}
+	int allocator = 0;
+	/*
+	while(allocator < ARENA){
+		printf("%d\n",stadium->size);
+		if(stadium->free != after(stadium)->bfree){
+			printf("stadium->free != next->bfree\n");
+			printf("stadium->free: %d after->bfree %d\n", stadium->free, after(stadium)->bfree);
+			printf("p1: %p, p2: %p\n", stadium, after(stadium));
+		}
+		allocator += stadium->size + HEAD;
+		stadium = after(stadium);
+	}
+	if(allocator != ARENA)printf("allocator != ARENA. allocator = %d, ARENA = %d\n", allocator, ARENA);
+	*/
+}
 
 struct head *flist;
 
@@ -98,12 +119,15 @@ struct head *split (struct head *block, int size){
 	//printf("this is fine\n");
 
 	struct head *splt = (struct head*)((char*)block + rsize);
+	printf("splt = block + %d\n", rsize);
 	splt->bsize = rsize;
-	splt->bfree = block->free;
+	splt->bfree = TRUE;
 	splt->size  = size;
-	splt->free 	= TRUE; //????
-	//printf("this\n");
-	struct head *aft = after(block);
+	splt->free 	= TRUE;
+	struct head *aft = after(splt);
+	//printf("SIZE %d\n", size);
+	//printf("SPLT %p\n", splt);
+	//printf("AFTER %p\n", aft);
 	aft->bsize = splt->size; //not sure what to set it to, why not just block->next->bsize?
 
 	//*************************************CHANGES*******************************
@@ -111,8 +135,8 @@ struct head *split (struct head *block, int size){
 	insert(block);
 	//*************************************CHANGES*******************************
 
-	printf("first addr %p\n", block);
-	printf("second addr %p\n", splt);
+	//printf("first addr %p\n", block);
+	//printf("second addr %p\n", splt);
 	return splt;
 }
 
@@ -141,7 +165,9 @@ struct head *new() {
 	new->bfree = FALSE;
 	new->bsize = 0;	//unsure
 	new->free = TRUE;
-	new->size = ARENA - 2*HEAD;	//unsure
+	new->size = ARENA - 2*HEAD;
+
+	printf("initial size: %ld\n", ARENA -2*HEAD);
 
 	struct head *sentinel = after(new); //Dummy head? for circle?
 	//After further reading this is to prevent unwanted merging.
@@ -187,10 +213,10 @@ int adjust(size_t request){
 	return request + (ALIGN - request % ALIGN);
 }
 
-
 void *dalloc(size_t request){
+	sanity(flist, arena); //bad performance hit, should remove for benchmarking
 	if(request <= 0){
-		return NULL; //or 0
+		return NULL;
 	}
 	int size = adjust(request);
 	struct head *taken = find(size);
@@ -201,17 +227,19 @@ void *dalloc(size_t request){
 	else {
 		taken->free = FALSE;
 		//printf("debug1\n");
+		printf("%p %p\n", taken, after(taken));
 		after(taken)->bfree = FALSE;
-		return (void*)taken + HEAD;
+		return HIDE(taken);
 	}
 }
 
 void dfree(void *memory){
 	if(memory != NULL){
-		struct head *block = memory - HEAD;
-		struct head *aft = after(block); //still have no clue of what to do with aft;
-										//we smart now, now we know
+		struct head *block = (void*)((char*)memory - HEAD);
+		struct head *aft = after(block);
+		
 		block->free = TRUE;
+		block->bfree = aft->bfree;
 		aft->bfree = TRUE;
 		insert(block);
 	}
