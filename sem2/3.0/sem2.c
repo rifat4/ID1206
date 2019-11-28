@@ -222,35 +222,6 @@ int adjust(size_t request){
 	return request + (ALIGN - request % ALIGN);
 }
 
-struct head *merge(struct head *block){
-	struct head *aft = after(block);
-	if(block->bfree){
-		struct head *bef = before(block);
-		detach(bef); //unlink the block before
-		bef->size += block->size + HEAD; //calculate and set the total size of the merged blocks
-		aft->bsize = bef->size; //update the block after the merged blocks
-		block = bef;
-	}
-
-	if(aft->free){
-		detach(aft);
-		block->size += aft->size + HEAD;
-		after(block)->bsize = block->size;
-	}
-	return block;
-}
-
-//for debugging purposes
-void freeMemory(){
-	struct head *block = flist;
-	int allocator = 0;
-	while(block != NULL){
-		allocator += block->size;
-		block = block->next;
-	}
-	printf("freelist has %d free memory\n", allocator);
-}
-
 void *dalloc(size_t request){
 	if(arena == NULL){flist = new();}
 	sanity(flist, arena); //bad performance hit, should remove for benchmarking
@@ -275,8 +246,8 @@ void *dalloc(size_t request){
 void dfree(void *memory){
 	sanity(flist, arena);
 	if(memory != NULL){
-		struct head *block = MAGIC(memory);
-		block = merge(block);
+		struct head *block = (void*)((char*)memory - HEAD);
+		memory = MAGIC(memory);
 		struct head *aft = after(block);
 		block->free = TRUE;
 		aft->bfree = TRUE;
@@ -288,4 +259,5 @@ void dfree(void *memory){
 
 void init(){
 	flist = new();
+	
 }
