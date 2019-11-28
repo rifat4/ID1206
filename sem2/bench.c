@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include "sem2.h"
 
-#define ROUNDS 100
-#define LOOP 10000
+#define ROUNDS 10
+#define LOOP 1000000
 
 int main() {
 	void *init;

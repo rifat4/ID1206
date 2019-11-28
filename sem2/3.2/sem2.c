@@ -200,7 +200,7 @@ struct head *find(size_t size){
 		//printf("temp %p\n", temp);
 		//printf("flist->size: %d \n",temp->size);
 		if(size <= temp->size){
-			int tempInt = flist->size;
+			int tempInt = temp->size;
 			detach(temp);
 			if(size + 32 <= tempInt){
 				//printf("split\n");

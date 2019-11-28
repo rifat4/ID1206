@@ -8,13 +8,15 @@
 
 #define HEAD (sizeof(struct head))
 
+#define SOLD (sizeof(struct sold))
+
 #define MIN(size) (((size) >(8))?(size):(8))
 
-#define LIMIT(size) (MIN(0) + HEAD + size)
+//#define LIMIT(size) (MIN(0) + HEAD + size)
 
-#define MAGIC(memory) ((struct head*)memory - 1)
+#define MAGIC(memory) (void*)((struct sold*)memory - 1)
 
-#define HIDE(block) (void*)((struct head* ) block + 1)
+#define HIDE(block) (void*)((struct sold*) block + 1)
 
 #define ALIGN 8
 
@@ -29,13 +31,22 @@ struct head {
 	struct head *prev;
 };
 
+struct sold {
+	uint16_t bfree;
+	uint16_t bsize;
+	uint16_t free;
+	uint16_t size;
+};
+
 struct head *arena = NULL;
 
 struct head *after(struct head *block) {
+	//if(!block->free) return (struct head*)((char*)block + HEAD + block->size);
 	return (struct head*)((char*)block + HEAD + block->size);
 }
 
 struct head *before(struct head *block) {
+	//if(!block->bfree) return (struct head*)((char*)block - HEAD - block->size);
 	return (struct head*)((char*)block - block->bsize - HEAD);
 }
 
@@ -72,7 +83,11 @@ void sanity(struct head *list, struct head *stadium){
 			printf("p1: %p, p2: %p\n", stadium, after(stadium));
 			printf("----------failed sanity check----------\n");
 		}
-		allocator += stadium->size + HEAD;
+		if(stadium->free){
+			allocator += stadium->size + HEAD;
+		} else {
+			allocator += stadium->size + HEAD;
+		}
 		stadium = randtest;
 	}
 	//printf("printf our arena ends at %p\n\n\n", stadium);
@@ -117,11 +132,8 @@ void insert(struct head *block) {
 
 
 struct head *split (struct head *block, int size){
-
-	//shouldnt it be 8 aligned? uncomment if needed
-	//if(size % 8 != 0) size += (8- (size % 8));
-	//its I from the future, we align the size before calling split big brain strats
-	int rsize = block->size - (HEAD + size); //new size of block
+	int rsize = block->size - size; //new size of block
+	size = size - HEAD;
 	block->size = rsize;
 	//printf("size : %d\n", size);
 	//printf("this is fine\n");
@@ -132,20 +144,11 @@ struct head *split (struct head *block, int size){
 	splt->bfree = TRUE;
 	splt->size  = size;
 	splt->free 	= TRUE;
+
 	struct head *aft = after(splt);
-	//printf("SIZE %d\n", size);
-	//printf("SPLT %p\n", splt);
-	//printf("AFTER %p\n", aft);
-	aft->bsize = splt->size; //not sure what to set it to, why not just block->next->bsize?
+	aft->bsize = splt->size;
 
-	//*************************************CHANGES*******************************
-	//printf("--test\n");
-	//printf("insert %p\n", block);
 	insert(block);
-	//*************************************CHANGES*******************************
-
-	//printf("first addr %p\n", block);
-	//printf("second addr %p\n", splt);
 	return splt;
 }
 
@@ -199,15 +202,15 @@ struct head *find(size_t size){
 	while(temp != NULL){
 		//printf("temp %p\n", temp);
 		//printf("flist->size: %d \n",temp->size);
-		if(size <= temp->size){
-			int tempInt = flist->size;
-			detach(temp);
-			if(size + 32 <= tempInt){
-				//printf("split\n");
+		if(size <= (temp->size)){
+			//int tempInt = temp->size;
+			//detach(temp);
+			if(size + 24 <= temp->size){
+				detach(temp);
 				temp = split(temp, size);
 				return temp;
 			} else {
-				//printf("nosplit\n");
+				detach(temp);
 				return temp;
 			}
 		}
@@ -218,6 +221,7 @@ struct head *find(size_t size){
 
 int adjust(size_t request){
 	//printf("request + (ALIGN - request mod ALIGN): %ld\n", request + (ALIGN - request % ALIGN));
+	if(request < 16) request = 16;
 	if((request % ALIGN) == 0){ return request;}
 	return request + (ALIGN - request % ALIGN);
 }
@@ -244,11 +248,14 @@ struct head *merge(struct head *block){
 void freeMemory(){
 	struct head *block = flist;
 	int allocator = 0;
+	int count = 0;
 	while(block != NULL){
+		count++;
 		allocator += block->size;
 		block = block->next;
 	}
 	printf("freelist has %d free memory\n", allocator);
+	printf("and the ammount of blocks is %d (including sentinel)\n", count);
 }
 
 void *dalloc(size_t request){
@@ -258,6 +265,7 @@ void *dalloc(size_t request){
 		return NULL;
 	}
 	int size = adjust(request);
+	size += SOLD;
 	struct head *taken = find(size);
 	if(taken == NULL){ 
 		printf("dalloc failed, no free of big enough size in flist\n");
@@ -283,6 +291,7 @@ void dfree(void *memory){
 		insert(block);
 	}
 	sanity(flist, arena);
+	//freeMemory();
 	return;
 }
 
