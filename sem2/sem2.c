@@ -93,6 +93,7 @@ void detach(struct head *block) {
 		}
 	} else {
 		if(block->next != NULL){
+			//printf("\n\ntrace\n\n block->next %p\n", block->next);
 			block->next->prev = NULL;
 			flist = block->next;
 			block->next = NULL;
@@ -110,6 +111,7 @@ void insert(struct head *block) {
 	if(flist != NULL){
 		flist->prev = block;
 	}
+	//printf("inserting %p to head of flist\n", block);
 	flist = block;
 }
 
@@ -138,6 +140,7 @@ struct head *split (struct head *block, int size){
 
 	//*************************************CHANGES*******************************
 	//printf("--test\n");
+	//printf("insert %p\n", block);
 	insert(block);
 	//*************************************CHANGES*******************************
 
@@ -190,18 +193,21 @@ struct head *new() {
 	return new;
 }
 
-struct head* find(size_t size){
+struct head *find(size_t size){
 	struct head* temp = flist;
 	//printf("flist %p\n", flist);
 	while(temp != NULL){
-		//printf("flist->size: %d \n",flist->size);
-		if(size <= flist->size){
+		//printf("temp %p\n", temp);
+		//printf("flist->size: %d \n",temp->size);
+		if(size <= temp->size){
 			int tempInt = flist->size;
 			detach(temp);
 			if(size + 32 <= tempInt){
+				//printf("split\n");
 				temp = split(temp, size);
 				return temp;
 			} else {
+				//printf("nosplit\n");
 				return temp;
 			}
 		}
@@ -217,6 +223,7 @@ int adjust(size_t request){
 }
 
 void *dalloc(size_t request){
+	if(arena == NULL){flist = new();}
 	sanity(flist, arena); //bad performance hit, should remove for benchmarking
 	if(request <= 0){
 		return NULL;
@@ -224,7 +231,7 @@ void *dalloc(size_t request){
 	int size = adjust(request);
 	struct head *taken = find(size);
 	if(taken == NULL){ 
-		printf("taken == NULL\n");
+		printf("dalloc failed, no free of big enough size in flist\n");
 		return NULL;
 	}
 	else {
@@ -246,11 +253,11 @@ void dfree(void *memory){
 		aft->bfree = TRUE;
 		insert(block);
 	}
-	printf("middle\n");
 	sanity(flist, arena);
 	return;
 }
 
 void init(){
 	flist = new();
+	
 }

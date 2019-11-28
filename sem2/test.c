@@ -1,18 +1,25 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <math.h>
 #include "sem2.h"
 
 int main(){
 	init();
 
-	int *i = dalloc(8);
+	size_t size = rand() % 10 + sizeof(int);
+
+	int *a = dalloc(size);
 	//printf("passed\n");
-	int *b = dalloc(27);
-	int *c = dalloc(27);
-	if(b == NULL){
+	*a = 25;
+	size = rand() % 10 + sizeof(int);
+	int *b = dalloc(size);
+	*b = 28;
+	size = rand() % 10 + sizeof(int);
+	int *c = dalloc(size);
+	if(a == NULL || b == NULL || c == NULL){
 		printf("dalloc failed\n");
 	}
-	printf("%p\n", i);
+	printf("%p\n", a);
 	printf("%p\n", b);
 	printf("%p\n", c);
 
@@ -20,6 +27,7 @@ int main(){
 	dfree(c);
 	printf("reallocate last\n");
 	c = dalloc(27);
+	if(c == NULL){printf("dalloc failed\n");}
 	printf("%p\n",c);
 	return 0;
 }
