@@ -241,6 +241,7 @@ struct head *merge(struct head *block){
 }
 
 //for debugging purposes
+/*
 void freeMemory(){
 	struct head *block = flist;
 	int allocator = 0;
@@ -249,6 +250,23 @@ void freeMemory(){
 		block = block->next;
 	}
 	printf("freelist has %d free memory\n", allocator);
+}
+*/
+
+void freeMemory(){
+	struct head *temp = flist;
+	int count = 0;
+	int allocator = 0;
+	int biggestFreeBlock = 0;
+	while(temp != NULL){
+		allocator += temp->size;
+		count++;
+		if(temp->size > biggestFreeBlock) biggestFreeBlock = temp->size;
+		temp = temp->next;
+	}
+	printf("Our biggest free block is %d\n", biggestFreeBlock);
+	printf("flist has %d free memory\n", allocator);
+	printf("flist has %d free blocks of memory (including sentinel)\n", count);
 }
 
 void *dalloc(size_t request){

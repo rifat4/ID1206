@@ -4,8 +4,8 @@
 #include <unistd.h>
 #include "sem2.h"
 
-#define ROUNDS 30
-#define LOOP 10
+#define ROUNDS 100
+#define LOOP 10000
 
 int main() {
 	void *init;
@@ -19,14 +19,8 @@ int main() {
 			size_t size = (rand() % 4000) + sizeof(int);
 			int *memory;
 			//printf("count: %d size: %ld\n", count++, size);
-			//freeMemory();
-			//printf("trying to allocate a block of size %ld\n", size);
 			memory = dalloc(size);
-			printf("%ld\n", size);
 			if(memory == NULL){
-				printf("the size of the block we tried to allocate %ld\n", size);
-				printf("number of times we have allocated and freed %d\n", (j * LOOP + i));
-				freeMemory();
 				fprintf(stderr, "dalloc failed\n");
 				return(1);
 			}
@@ -35,9 +29,9 @@ int main() {
 		}
 		current = sbrk(0);
 		int allocated = (int) ((current -init) /1024);
-		printf("the size of the block we tried to allocate %ld\n", size);
-				printf("number of times we have allocated and freed %d\n", (j * LOOP + i));
-				freeMemory();
+		printf("%d\n", j);
+		printf("The current top of the heap is %p.\n", current);
+		printf("increased by %d Kbyte\n", allocated);
 	}
 
 	return 0;

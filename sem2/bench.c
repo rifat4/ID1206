@@ -2,36 +2,43 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 #include "sem2.h"
 
-#define ROUNDS 10
-#define LOOP 1000000
+#define ROUNDS 100000
+#define LOOP 10
+#define KILO 1000
+#define SIZE 16
 
 int main() {
-	void *init;
-	void *current;
-	int count = 0;
 
-	printf("The initial top of the heap is %p.\n", init);
-	for(int j = 0; j < ROUNDS; j++){
+	clock_t begin = clock();
 
-		for(int i = 0; i < LOOP; i++){
-			size_t size = (rand() % 4000) + sizeof(int);
-			int *memory;
-			//printf("count: %d size: %ld\n", count++, size);
-			memory = dalloc(size);
-			if(memory == NULL){
-				fprintf(stderr, "dalloc failed\n");
-				return(1);
-			}
-			*memory = 123;
-			dfree(memory);
+	int *memory[KILO];
+
+
+	for(int i = 0; i < KILO; i++){
+		memory[i] = dalloc(SIZE);
+		//printf("count: %d size: %ld\n", count++, size);
+		if(memory == NULL){
+			fprintf(stderr, "dalloc failed\n");
+			return(1);
 		}
-		current = sbrk(0);
-		int allocated = (int) ((current -init) /1024);
-		printf("%d\n", j);
-		printf("The current top of the heap is %p.\n", current);
-		printf("increased by %d Kbyte\n", allocated);
+	}
+
+	for(int k = 0; k < LOOP; k++){
+	for(int j = 0; j < ROUNDS; j++){
+		for(int i = 0; i < KILO; i++){
+			*memory[i] = 123;
+		}
+	}
+	double time_spent = (double)(clock()-begin)/CLOCKS_PER_SEC;
+	begin = clock();
+	printf("Total time elapsed: %f seconds\n", time_spent);	
+	}
+
+	for(int i = 0; i < KILO; i++){
+		dfree(memory[i]);
 	}
 
 	return 0;
