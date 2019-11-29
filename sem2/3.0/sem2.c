@@ -197,10 +197,11 @@ struct head *find(size_t size){
 	struct head* temp = flist;
 	//printf("flist %p\n", flist);
 	while(temp != NULL){
+		//printf("temp: %p, size: %ld, temp->size %d\n", temp, size, temp->size);
 		//printf("temp %p\n", temp);
 		//printf("flist->size: %d \n",temp->size);
 		if(size <= temp->size){
-			int tempInt = flist->size;
+			int tempInt = temp->size;
 			detach(temp);
 			if(size + 32 <= tempInt){
 				//printf("split\n");
@@ -220,6 +221,22 @@ int adjust(size_t request){
 	//printf("request + (ALIGN - request mod ALIGN): %ld\n", request + (ALIGN - request % ALIGN));
 	if((request % ALIGN) == 0){ return request;}
 	return request + (ALIGN - request % ALIGN);
+}
+
+void freeMemory(){
+	struct head *temp = flist;
+	int count = 0;
+	int allocator = 0;
+	int biggestFreeBlock = 0;
+	while(temp != NULL){
+		allocator += temp->size;
+		count++;
+		if(temp->size > biggestFreeBlock) biggestFreeBlock = temp->size;
+		temp = temp->next;
+	}
+	printf("Our biggest free block is %d\n", biggestFreeBlock);
+	printf("flist has %d free memory\n", allocator);
+	printf("flist has %d free blocks of memory (including sentinel)\n", count);
 }
 
 void *dalloc(size_t request){
@@ -257,7 +274,8 @@ void dfree(void *memory){
 	return;
 }
 
+
+
 void init(){
 	flist = new();
-	
 }
